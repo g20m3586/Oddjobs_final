@@ -3,51 +3,90 @@ const router = express.Router();
 const Job = require('../models/Job');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// POST a new job (protected)
+// @route   POST /api/jobs
+// @desc    Create a new job
+// @access  Private
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const job = new Job({ ...req.body, postedBy: req.user.id });
+    const job = new Job({ ...req.body, user: req.user.id }); // ✅ FIXED here
     await job.save();
     res.status(201).json(job);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// GET all jobs (public)
+// @route   GET /api/jobs
+// @desc    Get all jobs
+// @access  Public
 router.get('/', async (req, res) => {
   try {
-    const jobs = await Job.find().populate('postedBy', 'username');
-    res.json(jobs);
+    const jobs = await Job.find().populate('user', 'email');
+    res.status(200).json(jobs);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// GET one job by ID (public)
+// @route   GET /api/jobs/:id
+// @desc    Get a single job by ID
+// @access  Public
 router.get('/:id', async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id).populate('postedBy', 'username');
-    if (!job) return res.status(404).json({ message: 'Job not found' });
-    res.json(job);
+    const job = await Job.findById(req.params.id).populate('user', 'email');
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+    res.status(200).json(job);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching job by ID:', err.message);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// DELETE a job (protected)
+// @route   PUT /api/jobs/:id
+// @desc    Update a job (only by creator)
+// @access  Private
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    if (job.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body },
+      { new: true }
+    );
+
+    res.json(updatedJob);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   DELETE /api/jobs/:id
+// @desc    Delete a job (only by creator)
+// @access  Private
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ message: 'Job not found' });
 
-    if (job.postedBy.toString() !== req.user.id)
-      return res.status(401).json({ message: 'Unauthorized' });
+    if (job.user.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
 
-    await job.remove();
-    res.json({ message: 'Job deleted' });
+    await job.deleteOne();
+
+    res.status(200).json({ message: 'Job deleted successfully' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Delete error:', err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

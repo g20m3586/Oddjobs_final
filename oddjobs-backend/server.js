@@ -3,7 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
-const jobRoutes = require('./routes/jobs'); // ✅ Add this
+const jobRoutes = require('./routes/jobs'); // Add this
 
 const app = express();
 
@@ -12,7 +12,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/jobs', jobRoutes); // ✅ Add this
+app.use('/api/jobs', jobRoutes); //  Add this
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
