@@ -16,17 +16,19 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// @route   GET /api/jobs
-// @desc    Get all jobs
-// @access  Public
-router.get('/', async (req, res) => {
+// @route   GET /api/jobs/my
+// @desc    Get all jobs created by the logged-in user
+// @access  Private
+router.get('/my', authMiddleware, async (req, res) => {
   try {
-    const jobs = await Job.find().populate('user', 'email');
-    res.status(200).json(jobs);
+    const jobs = await Job.find({ user: req.user.id }).sort({ date: -1 });
+    res.json(jobs);
   } catch (err) {
+    console.error('Error fetching user jobs:', err.message);
     res.status(500).json({ message: 'Server Error' });
   }
 });
+
 
 // @route   GET /api/jobs/:id
 // @desc    Get a single job by ID
